@@ -40,9 +40,11 @@ step <- { exten %>%
                   group_by(cycle, MagnetsZ_mm) %>%
                   summarise(
                             mean= mean(Extension_nm,na.rm = TRUE),
-                            sd= sd(Extension_nm,na.rm = TRUE)
-                  )
- 
+                            sd= sd(Extension_nm,na.rm = TRUE),
+                            count = n()
+                  ) %>%
+                  mutate(sde=sd/sqrt(count))
+
 }
 
 plot(step[step$MagnetsZ_mm==measureZ,]$mean, pch=3)
@@ -50,7 +52,7 @@ head(step)
 change <- {
         step %>%
         filter(MagnetsZ_mm == measureZ) %>%
-        select(cycle, mean, sd)        
+        select(cycle, mean, sde)        
         
 }
 change$delta <- rep(0, nrow(change))
