@@ -19,22 +19,28 @@ RestZ <- -5
 exten <- select(data, c(Time_sec,MagnetsZ_mm,Extension_nm))
 
 
-# key in cycles
+# cycle counters using magnetic position
+
+# initialize cycles at all rows to be 1 
 exten$cycle <- rep(1,nrow(exten))
+
 
 for (i in 2: nrow(exten)) {
         
+        # if the magnets position is larger than the prious one
+        # a position change of magnet is detected and cycle counter raise by 1 
+        # otherwise, record the same cycle
         if (exten$MagnetsZ_mm[[i]]> exten$MagnetsZ_mm[[i-1]]){
                 exten$cycle[[i]]<- exten$cycle[[i-1]]+1   
         } else {
-                
-                
+  
                 exten$cycle[[i]]<- exten$cycle[[i-1]]  
         }
-        
-        
+   
 }
 
+
+# summary the steps by calculatring the mean, sd and sem within each cycles
 
 step <- { exten %>%
                   group_by(cycle, MagnetsZ_mm) %>%
@@ -49,18 +55,25 @@ step <- { exten %>%
 
 plot(step[step$MagnetsZ_mm==measureZ,]$mean, pch=3)
 head(step)
+
+
+# change is the difference between each step 
+# when the Magnets position is at the measurement position
+
 change <- {
         step %>%
         filter(MagnetsZ_mm == measureZ) %>%
         select(cycle, mean, sde)        
-        
 }
+
 change$delta <- rep(0, nrow(change))
 
 for (i in 2:nrow(change)){
         change$delta[[i]] <- change$mean[[i]]-change$mean[[i-1]]
         
 }
+
+
 
 plot(change$delta)
 
