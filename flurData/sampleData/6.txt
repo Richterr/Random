@@ -1,0 +1,23 @@
+Data	Set	Name:	Wavelength	Pair	2
+Analyst:	
+
+Created:	11:17:28	03/04/15
+Data:	Original
+
+Instrument	Type:	RF-5301PC
+Wavelength:	EX:549.0nm	EM:563.0nm
+Slit	Width:	EX:5.0nm	EM:10.0nm
+Acquisition	Ra	2.000	Seconds
+Reaction	Time:	1800.000	Seconds
+Sensitivity:	High
+Response	Time:	Auto	
+Shutter	Mode:	Auto,	Closed
+
+	Time(sec)	Intensity
+	0.0000	103.334
+	2.0000	103.334
+	4.0000	103.334
+	6.0000	103.488
+	8.0000	103.643
+	10.0000	103.797
+
