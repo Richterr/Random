@@ -1,86 +1,74 @@
-library(dplyr)
+# find the individual wavelength by log scanning
 
 
-folderName= "./sampleData/"
-
-
-datafiles <- paste(folderName, list.files(folderName), sep="/")
-
-Dye1List <- c(1,5,8)
-Dye2List <- c(2,4,7)
-Dye3List <- c(3,6)
-
-
-getFileByIndex <- function(folderName, list, suffix){
+wavelengthScan <- function(datafiles){
     
-    datafiles <- paste(folderName, list, sep="/")
-    datafiles <- paste0(datafiles, suffix)
+    df <- data.frame(wave=read.csv(datafiles[[1]], skip=6, nrow=1, sep="\t")[[2]])    
     
-}
-    
-Dye1FileList <- getFileByIndex(folderName,Dye1List, ".txt")
-
-
-
-Dye2List <- c(2,4,7)
-Dye3List <- c(3,6)
-
-    
-    
-
-# write log ---------------------------------------------------------------
- 
-logf <- paste0("log", list.files(folderName),sep="")
-logf <- paste(folderName, logf ,sep="/")
-
-for (i in 1:n){   
-    # read in log 
-    log <- readLines(datafiles[[i]], 15)
-    log <- gsub(",","",log)
-    # write log 
-    write.csv(log,logf[[i]] ,row.names=FALSE)
+    for (i in 2: length(datafiles)){
+        print(i)
+        df2 <- data.frame(wave=read.csv(datafiles[[i]], skip=6, nrow=1, sep="\t")[[2]])
+        df <- rbind(df,df2)
+        
+        
+    }
+   df$wave <- as.factor(df$wave)
+   df$fileName <- datafiles
+   df
 }
 
-
-
-
-
-n <- length(files)
-
-
-
-for (i in 1:n){
+combineFluorData <- function (folderName, addTimeSecs){
     
-    data <- read.csv(files[[i]], skip=15, sep="\t")
+    datafiles <- paste(folderName, list.files(folderName), sep="/")
+    datafiles
     
-    # df <- data.frame(files[[i]]=data)
+    
+    df <- wavelengthScan(datafiles)
+    dir.create(file.path(folderName, "re"), showWarnings = FALSE)
+    
+    for (w in levels(df$wave)){
+        
+        # select the files for each dye 
+        filelist <- df[df$wave==w,] 
+        # print(w)
+        
+        # initilize a data frame for one dye indensity 
+        dt <- data.frame(Time.sec.=numeric(0), Intensity=numeric(0))
+        
+        
+        # combine data from one dye from different files into one data frame 
+        for (i in 1: nrow(filelist)){
+            
+            tempdt <- read.csv(filelist$fileName[[i]], 
+                               skip=15, sep="\t")
+            tempdt$Time.sec. <- tempdt$Time.sec. + (i-1)*addTimeSecs
+            
+            dt <- rbind(dt, tempdt[,2:3])
+            # print(dt) 
+        }
+        
+        
+        # creat a file 
+        filedir <- paste(folderName,"re",sep="/")
+        fileName <- paste(substr(w, start=4, stop=6),"nm.csv",sep="")
+        logName  <-  paste("log", substr(w, start=4, stop=6),"nm.csv",sep="")
+        
+        # save dataframe to the file
+        write.csv(dt, 
+                  paste(filedir,fileName,sep="//"), 
+                  row.names=FALSE)
+        
+        # read in log 
+        log <- readLines(filelist$fileName[[1]], 15)
+        log <- gsub(",","",log)
+        # write log 
+        write.csv(log,
+                  paste(filedir,logName,sep="//"),,
+                  row.names=FALSE)
+        
+    }
+    
     
 }
 
 
-
-# read in flur data
-temp.data <- read.csv("./control2_2.csv", skip=15)
-temp.data <- data.frame(temp.data)
-
-# read in log 
-log <- readLines("./control2_2.csv", 15)
-log <- gsub(",","",log)
-
-# write log 
-write.csv(log, "./log.txt",row.names=FALSE)
-
-# arrange flur data
-data <- select(temp.data,Time.sec.,Intensity)
-
-# rename 
-names(data) <- c("Time(sec)", "Intensity")
-
-# remove temp data
-rm(temp.data)
-
-# check data
-head(data)
-
-# output data
-write.csv(data, "./mydata.csv", row.names=FALSE)
