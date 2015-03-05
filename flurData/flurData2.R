@@ -1,3 +1,20 @@
+
+
+cleanfolder <- function(folderName){
+    
+    repath <-file.path(folderName, "re")
+    if (file.exists(repath)){
+        
+        unlink(repath, recursive=TRUE)
+        
+    }
+}
+
+
+
+
+
+
 # find the individual wavelength by log scanning
 
 
@@ -24,6 +41,8 @@ combineFluorData <- function (folderName, addTimeSecs){
     
     
     df <- wavelengthScan(datafiles)
+    
+    
     dir.create(file.path(folderName, "re"), showWarnings = FALSE)
     
     for (w in levels(df$wave)){
@@ -67,8 +86,7 @@ combineFluorData <- function (folderName, addTimeSecs){
                   row.names=FALSE)
         
     }
-    
-    
+
 }
 
 
