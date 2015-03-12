@@ -1,6 +1,5 @@
 library(dplyr)
 
-
 measureZ <- -2
 RestZ <- -5
 
@@ -17,6 +16,25 @@ TweezerExtenLoad <- function(file){
     exten <- select(data, c(Time_sec,MagnetsZ_mm,Extension_nm))
     
 }
+
+
+# add experiment details & output csv with experiment details--------------------------------------------------------
+TweezerAddDetail <- function(file, expDetail) {  
+    
+    df <- TweezerExtenLoad(file)
+    df$id <- file
+    df$expDetail <- expDetail
+    names(df) <- c("Time_sec", "Extension_nm", 
+                     "id", "exp-detail") 
+    TweezerWritecsv(df, sub(".txt","", file), "-detail.txt")
+    
+}
+
+
+
+
+
+
 
 TweezerCycleCountByMag <- function(Mod=1, exten){   
     # the function consider the position change of magnets as cycle initiator    
@@ -39,6 +57,8 @@ TweezerCycleCountByMag <- function(Mod=1, exten){
     cyc
 }
 
+
+
 TweezerCycleCountByNA <- function(exten){
     # TweezerCycleCountByNA count cycles by detecting continous NAs 
     cyc <- rep(1,nrow(exten))   
@@ -57,11 +77,46 @@ TweezerCycleCountByNA <- function(exten){
  
 }
 
+## how to define cycle in UV- vis tweezer experiment
+## vis-UV-vis-UV-vis
+## 111111122222223333
+
+## extract cycles by extension signal
+## during the UV time, the tracing software of tweezer doesn't record 
+## the extension signal of beads. So the time of record become discontinued. 
+## the function TweezerCycleCountByTime finds the discoutinution of time 
+## and the cycle counter increase by 1. 
+
+
+
+## how to do the extension measurement in a constant force
+## first, define a force that you want to measure
+## measureZ is the vertical position away from the glass surface of magnatics at one particular experiment setup
+## which may denote the measurement force
+
+## all the extension comparison should be done 
+## at the same measurement force to get a fair conclusion  
+
+
+## when the light switch from UV to visible, 
+## the bead trace software will automatically start to refocus microscop by piezo. 
+## but sometime, the trace software is not able to detect the bead. We need to manuelly do it 
+## In term of measurment, during the time of refocus, either auto or mannue, noise signal will be recorded. 
+## and the length of these signals are uncontrolable, which will cause inaccuracy in our final analysis
+## the auto focus position often takes 10-20s, which is 17%- 30% of the whole data in a minute experiment
+## but the manu focus might take very long time. 
+
+## one way to solve the problem is that only account for the last portion of data 
+## which is considered to be measured under forcusing status. 
+
+## another way is to 
+## manully mark the time when the microscope is reforcused, for example, shift the magnetic a little bit. 
+## but we don't use this in our previous experiment. 
+
 
 
 TweezerCycleCountByTime <- function(exten, deltaT){
-    
-    # TweezerCycleCountByNA count cycles by detecting continous NAs 
+       
     cyc <- rep(1,nrow(exten)) 
     
     for (i in 10: nrow(exten)) {
@@ -75,7 +130,13 @@ TweezerCycleCountByTime <- function(exten, deltaT){
     }
     cyc
     
-}
+} 
+
+
+
+
+
+
 
 TweezerStepping <- function(exten){
         # summary the steps by calculatring the mean, sd and sem within each cycles    
@@ -127,7 +188,7 @@ TweezerSteppingDelta <- function(step, measureZ){
 # TweezerWritecsv ---------------------------------------------------------
 
 TweezerWritecsv <- function(df, file, suffix){
-    write.csv(df, paste(file, "-step.csv"))
+    write.csv(df, paste(file, suffix),row.names=FALSE)
   
 }
 

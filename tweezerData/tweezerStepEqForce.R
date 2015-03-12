@@ -41,10 +41,6 @@ for (i in 10: nrow(exten)) {
 
 
 
-
-
-
-
 step <- { exten %>%
                   group_by(cycle, MagnetsZ_mm) %>%
                   summarise(
