@@ -3,192 +3,93 @@
 # the UV-vis tweezer experiemnts aims to measure the single molecular events of light-driven nanomotor
 
 library(dplyr)
-
-file <- "./sample.txt"
-expDetails <- "exp"
-originalData <- "./sample.txt"
+source("./tweezerDataCleanFunc.R")
 
 
-# extract subset of information ---------------------------------------------
-# Only keep Time_sec, MagnetsZ_mm and "Extension_nm" for data analysis
 
+file <- "D:/PostDoc/PostDoc2013/tweezer/2015-02-25-ND4-BP-H672/BP-ND4-UV4m-Vis1m-bead11.txt"
+
+# fill in the experiment detials
+expDetails <- "BP-ND4-UV4m-Vis1m"
+originalData <- file
 df <-TweezerExtenLoad(file)
 
-TweezerExtenLoad <- function(file){
-    
-    # the function will return a data with three columns
-    # Time_sec,MagnetsZ_mm,Extension_nm
-    
-    data <- read.csv(file, skip=5, sep="\t")
-    names(data) <- c("Time_sec", "MagnetsZ_mm", "Extension_nm", 
-                     "dx_nm", "dy_nm", "z0_nm", "x0_y_n", "y0", "Piezo_pstn", "turns") 
-    exten <- select(data, c(Time_sec,MagnetsZ_mm,Extension_nm))
-    
-}
+
+
+## plot out the data
+par(mfrow=c(2,1))
+plot(df$Time_sec, df$Extension_nm)
+plot(df$Time_sec, df$MagnetsZ_mm)
+
+
+
+## filter out the illogical data
+df <- df[which(df$Extension_nm<400 & df$Extension_nm>0),]
+plot(df$Time_sec,df$Extension_nm)
 
 
 
 
-
-# add cycle-----------------------
-# ## how to define cycle in UV- vis tweezer experiment------------------------------------------
-## vis-UV-vis-UV-vis
-## 111111122222223333
-
-## extract cycles by extension signal
-## during the UV time, the tracing software of tweezer doesn't record 
-## the extension signal of beads. So the time of record become discontinued. 
-## the function TweezerCycleCountByTime finds the discoutinution of time 
-## and the cycle counter increase by 1. 
+# detect cycles
+# select proper deltaT to get the right cycles
+deltaT <- 40
+UVfilter <- 30
+cycle <- TweezerCycleCountByTime(df, deltaT)
 
 
-## how to do the extension measurement in a constant force
-## first, define a force that you want to measure
-## measureZ is the vertical position away from the glass surface of magnatics at one particular experiment setup
-## which may denote the measurement force
-
-## all the extension comparison should be done 
-## at the same measurement force to get a fair conclusion  
 
 
-## when the light switch from UV to visible, 
-## the bead trace software will automatically start to refocus microscop by piezo. 
-## but sometime, the trace software is not able to detect the bead. We need to manuelly do it 
-## In term of measurment, during the time of refocus, either auto or manually, noise signal will be recorded. 
-## and the length of these signals are uncontrolable, which will cause inaccuracy in our final analysis
-## the auto focus position often takes 10-20s, which is 17%- 30% of the whole data in a minute experiment
-## but the manu focus might take very long time. 
+# check cycle detection
+par(mfrow=c(1,1))
+title(main = list(expDetails, cex = 1.5,
+                  col = "red", font = 3))
+plot(df$Time_sec,cycle)
 
-## one way to alleviate the problem is that only account for the last portion of data 
-## which is roughly to be measured under forcusing status. 
+plot(df$Time_sec, df$Extension_nm, ylim=range(df$Extension_nm))
 
-## another way is to 
-## manully mark the time when the microscope is reforcused, for example, shift the magnetic a little bit.
-## the manually mark method may be simply change the magnetic position a little and start timing the experiments 
-## This may also have problem becuase of elongating the light exposure potencially 
-## but we don't use this in our previous experiment.
-# adjust deltaT to get reasiable cycles 
-
-# wrong one 
-deltaT <- 10
-cycle <- TweezerCycleCountByTime(df, 1)
-plot(cycle, df$Time_sec)
+plot(df$Time_sec, df$MagnetsZ_mm)
 
 
-# rigtht one 
-deltaT <- 50
-cycle <- TweezerCycleCountByTime(df, 50)
-plot(cycle, df$Time_sec)
 
+# if OK, plot out as record
+dev.print(png, file = sub(".txt","_plotcycle.png",file), width = 1024, height = 768)
 df$cycle <- cycle
 
-TweezerCycleCountByTime <- function(df, deltaT){
-    
-    cyc <- rep(1,nrow(df)) 
-    
-    for (i in 10: nrow(df)) {
-        
-        if (df$Time_sec[[i]]>df$Time_sec[[i-1]]+deltaT){   
-            cyc[[i]]<- cyc[[i-1]]+1               
-        } else {
-            cyc[[i]]<- cyc[[i-1]]  
-        }
-        
-    }
-    cyc
-    
-} 
+
+
+# select a force to compare
+measure_Z <- -2
 
 
 
-# Uv exposure time per cycle--------------------- 
-
-# time sequence 
-UVDurationPerCycle <- function(df, filter=60){
-    timeSeq <- df$Time_sec
-    start <- timeSeq[1]
-    end <- timeSeq[length(timeSeq)]
-    deltat <- c(timeSeq,end)-c(start,timeSeq)
-    UVDurationPerCycle<- data.frame(cycle=1: length(deltat[deltat>filter]),UVduration =deltat[deltat>filter])
-
-    UVDurationPerCycle
-    
-}
-
-UVDurationPerCycle(df)
-
-
-# vis exposure time per Cycle-----------------------
-
-# df contains cycle index and time sequence 
-VisDurationPerCycle <- function(df){
-    
-    totalCycle <- df$cycle[[nrow(df)]]
-    
-    visDurationPerCycle <- data.frame(cycle=0, Visduration=0)
-    
-    for (i in 1:totalCycle){
-        # extract visible signal at each cycle
-        vis_i <- df$Time_sec[which(df$cycle==i)]
-        
-        # substract end time to starting time to get time inverval
-        visDuration <- vis_i[[length(vis_i)]]-vis_i[[length(1)]]
-        visDurationPerCycle<-rbind(visDurationPerCycle,c(cycle=i,Visduration=visDuration))
-    }
-    
-    visDurationPerCycle[-1,]
-}
-
-
-
-
-cumsum(VisDurationPerCycle(df)$duration)
-
-
-# mean of extension --------------------------------------------------
-
-# average only the data points at mesurement Z at each cycle
-
-plot(df$cycle,df$Extension_nm)
-
-
-
-ExtensionAverByCycle <- function(df, measure_Z){
-    
-    totalCycle <- df$cycle[[nrow(df)]]
-    std <- function(x) sd(x)/sqrt(length(x))
-    
-    # init
-    ExtensionAverByCycle <- data.frame(cycle=0, meanExtension=0, stdExtension=0)
-    
-    for (i in 1:totalCycle){
-        
-        # extract extension signal of each cycle at measuremnt Z
-        exten_i <- df$Extension_nm[which(df$MagnetsZ_mm==measure_Z & df$cycle==i)]
-        exten_i <- na.omit(exten_i)
-        print(length(exten_i))
-        # average
-        mean_exten <- mean(exten_i)
-        # standard error of mean
-        std_exten <- std(exten_i)
-        ExtensionAverByCycle<-rbind(ExtensionAverByCycle,
-                                    c(cycle=i, meanExtension=mean_exten, stdExtension=std_exten))
-    }
-    
-    ExtensionAverByCycle[-1,]
-}
 
 # combine data together
 df_new <- Reduce(function(x, y) merge(x, y, all=TRUE), 
-       list(ExtensionAverByCycle(df, measure_Z=-2), 
-            VisDurationPerCycle(df), 
-            UVDurationPerCycle(df)))
+                 list(ExtensionAverByCycle(df, measure_Z=measure_Z), 
+                      VisDurationPerCycle(df), 
+                      UVDurationPerCycle(df, filter=UVfilter)))
 
- 
+
+
+
+# addin all information--------------------------------------- 
 df_new$expDetails <- expDetails 
 df_new$originalData <- originalData
-df_new
+df_new$measure_Z <- measure_Z
+df_new$forceMode <- paste(as.character(unique(df$MagnetsZ_mm)),collapse="")
+
+
+# analysis 
+df_new$stepSize <- df_new$meanExtension-c(df_new$meanExtension[1],df_new$meanExtension[1:(nrow(df_new)-1)] )
+df_new$stepSize_cumsum<-cumsum(df_new$stepSize)
+df_new$Visduration_cumsum<-cumsum(df_new$Visduration)
+df_new$UVduration_cumsum <- cumsum(df_new$UVduration)
+
+par(mfrow=c(3,1))
+plot(stepSize_cumsum ~ UVduration_cumsum, data=df_new)    
+plot(stepSize_cumsum ~ Visduration_cumsum, data=df_new)   
+plot(stepSize_cumsum ~ stepSize_cumsum, data=df_new)  
+
+
 write.csv(df_new,sub(".txt","_clean.txt",file), row.names=F)
-
-
 
