@@ -11,28 +11,46 @@ cleanfolder <- function(folderName){
 }
 
 
-
-
-
-
 # find the individual wavelength by log scanning
 
-
 wavelengthScan <- function(datafiles){
-    
+
     df <- data.frame(wave=read.csv(datafiles[[1]], skip=6, nrow=1, sep="\t")[[2]])    
     
     for (i in 2: length(datafiles)){
         print(i)
         df2 <- data.frame(wave=read.csv(datafiles[[i]], skip=6, nrow=1, sep="\t")[[2]])
         df <- rbind(df,df2)
-        
-        
+  
     }
    df$wave <- as.factor(df$wave)
    df$fileName <- datafiles
    df
 }
+
+CreateTimeScan <- function(datafiles){
+    
+
+    # datafiles <- paste("./sampleData/", list.files("./sampleData/"), sep="/")
+    
+    date<- read.csv(datafiles[[1]], skip=1, nrow=1, sep="\t")[[2]]   
+    time <- read.csv(datafiles[[1]], skip=1, nrow=1, sep="\t")[[1]]   
+    df <- data.frame(creatTime=strptime(paste(date,time),"%m/%d/%y %H:%M:%S"))
+    
+    for (i in 2: length(datafiles)){
+        print(i)
+        date<- read.csv(datafiles[[i]], skip=1, nrow=1, sep="\t")[[2]]   
+        time <- read.csv(datafiles[[i]], skip=1, nrow=1, sep="\t")[[1]] 
+        df2 <- data.frame(creatTime=strptime(paste(date,time),"%m/%d/%y %H:%M:%S"))
+        df <- rbind(df,df2)
+        
+    }
+
+    df$fileName <- datafiles
+    df
+ 
+}
+
 
 combineFluorData <- function (folderName, addTimeSecs){
     
@@ -40,8 +58,9 @@ combineFluorData <- function (folderName, addTimeSecs){
     datafiles
     
     
-    df <- wavelengthScan(datafiles)
+    df <- merge(wavelengthScan(datafiles),CreateTimeScan(datafiles))
     
+    df <-df[order(df$creatTime),]
     
     dir.create(file.path(folderName, "re"), showWarnings = FALSE)
     
